@@ -18,6 +18,8 @@ enum SneakContentType {
     case mic
     case battery
     case download
+    case timer
+    case customNotification
 }
 
 struct sneakPeek {
@@ -51,6 +53,9 @@ class BoringViewCoordinator: ObservableObject {
     static let shared = BoringViewCoordinator()
 
     @Published var currentView: NotchViews = .home
+    @Published var customAlertTitle: String = ""
+    @Published var customAlertIcon: String = "bell.badge.fill"
+    private var customAlertTask: Task<Void, Never>?
     @Published var helloAnimationRunning: Bool = false
     private var sneakPeekDispatch: DispatchWorkItem?
     private var expandingViewDispatch: DispatchWorkItem?
@@ -122,6 +127,7 @@ class BoringViewCoordinator: ObservableObject {
         }
         
         selectedScreenUUID = preferredScreenUUID ?? NSScreen.main?.displayUUID ?? ""
+        DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("com.moha.boringnotch.notify"), object: nil, queue: .main) { [weak self] note in let t = (note.userInfo?["title"] as? String) ?? "Alert"; let i = (note.userInfo?["icon"] as? String) ?? "bell.badge.fill"; let tm = (note.userInfo?["timer"] as? Bool) ?? false; Task { @MainActor in self?.triggerSecondaryDot(title: t, icon: i, isTimer: tm, duration: tm ? 10 : 4) } }
         // Observe changes to accessibility authorization and react accordingly
         accessibilityObserver = NotificationCenter.default.addObserver(
             forName: Notification.Name.accessibilityAuthorizationChanged,
@@ -294,6 +300,7 @@ class BoringViewCoordinator: ObservableObject {
         }
     }
     
+    func triggerSecondaryDot(title: String, icon: String = "bell.badge.fill", isTimer: Bool = false, duration: TimeInterval = 4.0) { customAlertTask?.cancel(); withAnimation(.spring(response: 0.38, dampingFraction: 0.75)) { self.customAlertTitle = title; self.customAlertIcon = isTimer ? "timer" : icon; self.expandingView.type = isTimer ? .timer : .customNotification; self.expandingView.show = true }; customAlertTask = Task { [weak self] in try? await Task.sleep(for: .seconds(duration)); guard let self, !Task.isCancelled else { return }; await MainActor.run { withAnimation { self.customAlertTitle = ""; self.expandingView.show = false } } } }
     func showEmpty() {
         currentView = .home
     }

@@ -88,30 +88,22 @@ struct ContentView: View {
             return max(0.6, scaleFactor)
         }()
         
+        let hasActiveMusic = (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled
+        let isThug = hasActiveMusic && (musicManager.artistName.localizedCaseInsensitiveContains("young thug") || musicManager.artistName.localizedCaseInsensitiveContains("thugger"))
+        let hasSplitDot = vm.notchState == .closed && ((coordinator.expandingView.show && coordinator.expandingView.type != .music) || (coordinator.sneakPeek.show && coordinator.sneakPeek.type != .music) || !coordinator.customAlertTitle.isEmpty)
+        let dotIcon = !coordinator.customAlertTitle.isEmpty ? coordinator.customAlertIcon : (coordinator.expandingView.type == .download ? "arrow.down.circle.fill" : (coordinator.expandingView.type == .timer ? "timer" : "bell.badge.fill"))
+
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
+                HStack(spacing: 8) {
                 let mainLayout = NotchLayout()
                     .frame(alignment: .top)
-                    .padding(
-                        .horizontal,
-                        vm.notchState == .open
-                        ? Defaults[.cornerRadiusScaling]
-                        ? (cornerRadiusInsets.opened.top) : (cornerRadiusInsets.opened.bottom)
-                        : cornerRadiusInsets.closed.bottom
-                    )
+                    .padding(.horizontal, vm.notchState == .open ? 18 : 12)
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
                     .background(.black)
-                    .clipShape(currentNotchShape)
-                    .overlay(alignment: .top) {
-                        Rectangle()
-                            .fill(.black)
-                            .frame(height: 1)
-                            .padding(.horizontal, topCornerRadius)
-                    }
-                    .shadow(
-                        color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
-                            ? .black.opacity(0.7) : .clear, radius: Defaults[.cornerRadiusScaling] ? 6 : 4
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: vm.notchState == .open ? 28 : 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: vm.notchState == .open ? 28 : 20, style: .continuous).stroke(isThug ? Color.green.opacity(0.7) : Color.white.opacity(0.14), lineWidth: isThug ? 1.5 : 0.8))
+                    .shadow(color: isThug ? Color.green.opacity(0.45) : ((vm.notchState == .open || isHovering || hasActiveMusic) ? .black.opacity(0.65) : .clear), radius: vm.notchState == .open ? 12 : 6)
                     .padding(
                         .bottom,
                         vm.effectiveClosedNotchHeight == 0 ? 10 : 0
@@ -183,18 +175,21 @@ struct ContentView: View {
                     }
                     .sensoryFeedback(.alignment, trigger: haptics)
                     .contextMenu {
-                        Button("Settings") {
-                            DispatchQueue.main.async {
-                                SettingsWindowController.shared.showWindow()
-                            }
-                        }
-                        .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
-                        //                    Button("Edit") { // Doesnt work....
-                        //                        let dn = DynamicNotch(content: EditPanelView())
-                        //                        dn.toggle()
-                        //                    }
-                        //                    .keyboardShortcut("E", modifiers: .command)
+                        Button("Settings") { DispatchQueue.main.async { SettingsWindowController.shared.showWindow() } }
+                            .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
+                        Button("Test Split Dot (Timer)") { BoringViewCoordinator.shared.triggerSecondaryDot(title: "Timer", icon: "timer", isTimer: true, duration: 8.0) }
                     }
+                if hasSplitDot {
+                    Circle().fill(.black)
+                        .frame(width: max(32, vm.effectiveClosedNotchHeight), height: max(32, vm.effectiveClosedNotchHeight))
+                        .overlay(Circle().stroke(isThug ? Color.green.opacity(0.8) : Color.white.opacity(0.18), lineWidth: 1))
+                        .overlay(Image(systemName: dotIcon).font(.system(size: 13, weight: .semibold)).foregroundStyle(isThug ? .green : .white))
+                        .shadow(color: .black.opacity(0.6), radius: 6)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
+                        .onTapGesture { doOpen() }
+                }
+                }
+                .padding(.top, 6)
                 if vm.chinHeight > 0 {
                     Rectangle()
                         .fill(Color.black.opacity(0.01))
@@ -287,7 +282,7 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
-                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
+                      } else if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
                           MusicLiveActivity()
                               .frame(alignment: .center)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
@@ -297,7 +292,7 @@ struct ContentView: View {
                                .frame(height: max(24, vm.effectiveClosedNotchHeight))
                                .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                        } else {
-                           Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: vm.effectiveClosedNotchHeight)
+                           Capsule().fill(.clear).frame(width: 96, height: max(32, vm.effectiveClosedNotchHeight))
                        }
 
                       if coordinator.sneakPeek.show {
