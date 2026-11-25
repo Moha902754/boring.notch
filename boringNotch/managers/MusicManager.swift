@@ -120,11 +120,7 @@ class MusicManager: ObservableObject {
         switch type {
         case .nowPlaying:
             // Only create NowPlayingController if not deprecated on this macOS version
-            if !self.isNowPlayingDeprecated {
-                newController = NowPlayingController()
-            } else {
-                return nil
-            }
+            newController = NowPlayingController()
         case .appleMusic:
             newController = AppleMusicController()
         case .spotify:
@@ -153,9 +149,7 @@ class MusicManager: ObservableObject {
         print("Preferred Media Controller: \(preferredType)")
 
         // If NowPlaying is deprecated but that's the preference, use Apple Music instead
-        let controllerType = (self.isNowPlayingDeprecated && preferredType == .nowPlaying)
-            ? .appleMusic
-            : preferredType
+        let controllerType = preferredType
 
         if let controller = createController(for: controllerType) {
             setActiveController(controller)

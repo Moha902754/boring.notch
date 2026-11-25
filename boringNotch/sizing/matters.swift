@@ -38,7 +38,7 @@ enum MusicPlayerImageSizes {
 
 @MainActor func getClosedNotchSize(screenUUID: String? = nil) -> CGSize {
     // Default notch size, to avoid using optionals
-    var notchHeight: CGFloat = max(34, Defaults[.nonNotchHeight])
+    var notchHeight: CGFloat = Defaults[.nonNotchHeight]
     var notchWidth: CGFloat = 195
 
     var selectedScreen = NSScreen.main

@@ -98,7 +98,7 @@ struct ContentView: View {
                 HStack(spacing: 8) {
                 let mainLayout = NotchLayout()
                     .frame(alignment: .top)
-                    .padding(.horizontal, vm.notchState == .open ? 18 : 12)
+                    .padding(.horizontal, vm.notchState == .open ? 16 : 10)
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
                     .background(.black)
                     .clipShape(RoundedRectangle(cornerRadius: vm.notchState == .open ? 28 : 20, style: .continuous))
@@ -181,7 +181,7 @@ struct ContentView: View {
                     }
                 if hasSplitDot {
                     Circle().fill(.black)
-                        .frame(width: max(32, vm.effectiveClosedNotchHeight), height: max(32, vm.effectiveClosedNotchHeight))
+                        .frame(width: max(20, vm.effectiveClosedNotchHeight), height: max(20, vm.effectiveClosedNotchHeight))
                         .overlay(Circle().stroke(isThug ? Color.green.opacity(0.8) : Color.white.opacity(0.18), lineWidth: 1))
                         .overlay(Image(systemName: dotIcon).font(.system(size: 13, weight: .semibold)).foregroundStyle(isThug ? .green : .white))
                         .shadow(color: .black.opacity(0.6), radius: 6)
@@ -189,7 +189,7 @@ struct ContentView: View {
                         .onTapGesture { doOpen() }
                 }
                 }
-                .padding(.top, 6)
+                .padding(.top, 4)
                 if vm.chinHeight > 0 {
                     Rectangle()
                         .fill(Color.black.opacity(0.01))
@@ -289,10 +289,10 @@ struct ContentView: View {
                           BoringFaceAnimation()
                        } else if vm.notchState == .open {
                            BoringHeader()
-                               .frame(height: max(24, vm.effectiveClosedNotchHeight))
+                               .frame(height: max(20, vm.effectiveClosedNotchHeight))
                                .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                        } else {
-                           Capsule().fill(.clear).frame(width: 96, height: max(32, vm.effectiveClosedNotchHeight))
+                           Capsule().fill(.clear).frame(width: 92, height: max(20, vm.effectiveClosedNotchHeight))
                        }
 
                       if coordinator.sneakPeek.show {
