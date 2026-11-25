@@ -67,7 +67,7 @@ enum MusicPlayerImageSizes {
             }
         } else {
             // Display WITHOUT a notch: always fit the menu bar
-            notchHeight = NSStatusBar.system.thickness
+            notchHeight = NSStatusBar.system.thickness + 2
         }
     }
 
