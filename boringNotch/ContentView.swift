@@ -101,8 +101,8 @@ struct ContentView: View {
                     .padding(.horizontal, vm.notchState == .open ? 16 : 10)
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
                     .background(.black)
-                    .clipShape(RoundedRectangle(cornerRadius: vm.notchState == .open ? 28 : 20, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: vm.notchState == .open ? 28 : 20, style: .continuous).stroke(isThug ? Color.green.opacity(0.7) : Color.white.opacity(0.14), lineWidth: isThug ? 1.5 : 0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: vm.notchState == .open ? 26 : 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: vm.notchState == .open ? 26 : 16, style: .continuous).stroke(isThug ? Color.green.opacity(0.7) : Color.white.opacity(0.14), lineWidth: isThug ? 1.5 : 0.8))
                     .shadow(color: isThug ? Color.green.opacity(0.45) : ((vm.notchState == .open || isHovering || hasActiveMusic) ? .black.opacity(0.65) : .clear), radius: vm.notchState == .open ? 12 : 6)
                     .padding(
                         .bottom,
@@ -189,7 +189,7 @@ struct ContentView: View {
                         .onTapGesture { doOpen() }
                 }
                 }
-                .padding(.top, 4)
+                .padding(.top, 10)
                 if vm.chinHeight > 0 {
                     Rectangle()
                         .fill(Color.black.opacity(0.01))
@@ -292,7 +292,7 @@ struct ContentView: View {
                                .frame(height: vm.effectiveClosedNotchHeight)
                                .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                        } else {
-                           Capsule().fill(.clear).frame(width: 92, height: max(18, vm.effectiveClosedNotchHeight))
+                           Capsule().fill(.clear).frame(width: 72, height: max(20, vm.effectiveClosedNotchHeight))
                        }
 
                       if coordinator.sneakPeek.show {
