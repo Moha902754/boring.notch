@@ -1,0 +1,25 @@
+name: Build
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          xcodebuild -project boringNotch.xcodeproj -scheme boringNotch \
+            -configuration Release -derivedDataPath build \
+            ARCHS="x86_64 arm64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" build
+      - name: Package
+        run: |
+          APP=$(find build/Build/Products/Release -maxdepth 1 -name "*.app" | head -n 1)
+          echo "Found: $APP"
+          codesign --force --deep --sign - "$APP"
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/boringNotch.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boringNotch
+          path: ${{ runner.temp }}/boringNotch.zip
