@@ -66,11 +66,8 @@ enum MusicPlayerImageSizes {
                 notchHeight = screen.frame.maxY - screen.visibleFrame.maxY
             }
         } else {
-            // This is a display WITHOUT a notch - use non-notch height settings
-            notchHeight = Defaults[.nonNotchHeight]
-            if Defaults[.nonNotchHeightMode] == .matchMenuBar {
-                notchHeight = screen.frame.maxY - screen.visibleFrame.maxY
-            }
+            // Display WITHOUT a notch: always fit the menu bar
+            notchHeight = NSStatusBar.system.thickness
         }
     }
 
