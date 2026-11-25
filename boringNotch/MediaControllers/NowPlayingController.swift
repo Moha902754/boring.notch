@@ -206,7 +206,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
                         if let a = d["kMRMediaRemoteNowPlayingInfoArtist"] as? String { st.artist = a }
                         if let al = d["kMRMediaRemoteNowPlayingInfoAlbum"] as? String { st.album = al }
                         if let du = d["kMRMediaRemoteNowPlayingInfoDuration"] as? Double { st.duration = du }
-                        if let el = d["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? Double { st.elapsedTime = el }
+                        if let el = d["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? Double { st.currentTime = el }
                         if let pr = d["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double { st.playbackRate = pr }
                         if let art = d["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data { st.artwork = art }
                     }
@@ -219,6 +219,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
         }
         refresh()
     }
+    private func fetchFavoriteStateIfSupported() async {}
 }
 
 struct NowPlayingUpdate: Codable {
