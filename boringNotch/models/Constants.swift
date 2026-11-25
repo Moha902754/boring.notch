@@ -86,9 +86,9 @@ extension Defaults.Keys {
     )
     static let nonNotchHeightMode = Key<WindowHeightMode>(
         "nonNotchHeightMode",
-        default: WindowHeightMode.matchMenuBar
+        default: WindowHeightMode.custom
     )
-    static let nonNotchHeight = Key<CGFloat>("nonNotchHeight", default: 32)
+    static let nonNotchHeight = Key<CGFloat>("nonNotchHeight", default: 24)
     static let notchHeight = Key<CGFloat>("notchHeight", default: 32)
     //static let openLastTabByDefault = Key<Bool>("openLastTabByDefault", default: false)
     static let showOnLockScreen = Key<Bool>("showOnLockScreen", default: false)

@@ -181,7 +181,7 @@ struct ContentView: View {
                     }
                 if hasSplitDot {
                     Circle().fill(.black)
-                        .frame(width: max(20, vm.effectiveClosedNotchHeight), height: max(20, vm.effectiveClosedNotchHeight))
+                        .frame(width: max(22, vm.effectiveClosedNotchHeight), height: max(22, vm.effectiveClosedNotchHeight))
                         .overlay(Circle().stroke(isThug ? Color.green.opacity(0.8) : Color.white.opacity(0.18), lineWidth: 1))
                         .overlay(Image(systemName: dotIcon).font(.system(size: 13, weight: .semibold)).foregroundStyle(isThug ? .green : .white))
                         .shadow(color: .black.opacity(0.6), radius: 6)
@@ -289,10 +289,10 @@ struct ContentView: View {
                           BoringFaceAnimation()
                        } else if vm.notchState == .open {
                            BoringHeader()
-                               .frame(height: max(20, vm.effectiveClosedNotchHeight))
+                               .frame(height: vm.effectiveClosedNotchHeight)
                                .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                        } else {
-                           Capsule().fill(.clear).frame(width: 92, height: max(20, vm.effectiveClosedNotchHeight))
+                           Capsule().fill(.clear).frame(width: 92, height: max(18, vm.effectiveClosedNotchHeight))
                        }
 
                       if coordinator.sneakPeek.show {

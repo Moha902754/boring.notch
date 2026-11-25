@@ -187,142 +187,38 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     }
     
     // MARK: - Setup Methods
+    private var mrObs: [NSObjectProtocol] = []
     private func setupNowPlayingObserver() async {
-        let process = Process()
-        guard
-            let scriptURL = Bundle.main.url(forResource: "mediaremote-adapter", withExtension: "pl"),
-            let frameworkPath = Bundle.main.privateFrameworksPath?.appending("/MediaRemoteAdapter.framework")
-        else {
-            assertionFailure("Could not find mediaremote-adapter.pl script or framework path")
-            return
-        }
-        
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
-        process.arguments = [scriptURL.path, frameworkPath, "stream"]
-        
-        let pipeHandler = JSONLinesPipeHandler()
-        process.standardOutput = await pipeHandler.getPipe()
-        
-        self.process = process
-        self.pipeHandler = pipeHandler
-
-        do {
-            try process.run()
-            streamTask = Task { [weak self] in
-                await self?.processJSONStream()
+        guard let regPtr = CFBundleGetFunctionPointerForName(mediaRemoteBundle, "MRMediaRemoteRegisterForNowPlayingNotifications" as CFString),
+              let infoPtr = CFBundleGetFunctionPointerForName(mediaRemoteBundle, "MRMediaRemoteGetNowPlayingInfo" as CFString),
+              let playPtr = CFBundleGetFunctionPointerForName(mediaRemoteBundle, "MRMediaRemoteGetNowPlayingApplicationIsPlaying" as CFString) else { return }
+        let regFn = unsafeBitCast(regPtr, to: (@convention(c) (DispatchQueue) -> Void).self)
+        let infoFn = unsafeBitCast(infoPtr, to: (@convention(c) (DispatchQueue, @escaping ([String: Any]?) -> Void) -> Void).self)
+        let playFn = unsafeBitCast(playPtr, to: (@convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void).self)
+        regFn(.main)
+        let refresh = { [weak self] in
+            guard let self else { return }
+            playFn(.main) { isPlaying in
+                infoFn(.main) { dict in
+                    var st = self.playbackState; st.isPlaying = isPlaying
+                    if let d = dict {
+                        if let t = d["kMRMediaRemoteNowPlayingInfoTitle"] as? String { st.title = t }
+                        if let a = d["kMRMediaRemoteNowPlayingInfoArtist"] as? String { st.artist = a }
+                        if let al = d["kMRMediaRemoteNowPlayingInfoAlbum"] as? String { st.album = al }
+                        if let du = d["kMRMediaRemoteNowPlayingInfoDuration"] as? Double { st.duration = du }
+                        if let el = d["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? Double { st.elapsedTime = el }
+                        if let pr = d["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double { st.playbackRate = pr }
+                        if let art = d["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data { st.artwork = art }
+                    }
+                    st.lastUpdated = Date(); self.playbackState = st
+                }
             }
-        } catch {
-            assertionFailure("Failed to launch mediaremote-adapter.pl: \(error)")
         }
+        for n in ["kMRMediaRemoteNowPlayingInfoDidChangeNotification", "kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification", "kMRMediaRemoteNowPlayingApplicationDidChangeNotification"] {
+            mrObs.append(NotificationCenter.default.addObserver(forName: Notification.Name(n), object: nil, queue: .main) { _ in refresh() })
+        }
+        refresh()
     }
-
-    // MARK: - Async Stream Processing
-    private func processJSONStream() async {
-        guard let pipeHandler = self.pipeHandler else { return }
-        
-        await pipeHandler.readJSONLines(as: NowPlayingUpdate.self) { [weak self] update in
-            await self?.handleAdapterUpdate(update)
-        }
-    }
-
-    // MARK: - Update Methods
-    private func handleAdapterUpdate(_ update: NowPlayingUpdate) async {
-        let payload = update.payload
-        let diff = update.diff ?? false
-
-        var newPlaybackState = PlaybackState(bundleIdentifier: playbackState.bundleIdentifier)
-        
-        newPlaybackState.title = payload.title ?? (diff ? self.playbackState.title : "")
-        newPlaybackState.artist = payload.artist ?? (diff ? self.playbackState.artist : "")
-        newPlaybackState.album = payload.album ?? (diff ? self.playbackState.album : "")
-        newPlaybackState.duration = payload.duration ?? (diff ? self.playbackState.duration : 0)
-        
-        if let elapsedTime = payload.elapsedTime {
-            newPlaybackState.currentTime = elapsedTime
-        } else if diff {
-            if payload.playing == false {
-                let timeSinceLastUpdate = Date().timeIntervalSince(self.playbackState.lastUpdated)
-                newPlaybackState.currentTime = self.playbackState.currentTime + (self.playbackState.playbackRate * timeSinceLastUpdate)
-            } else {
-                newPlaybackState.currentTime = self.playbackState.currentTime
-            }
-        } else {
-            newPlaybackState.currentTime = 0
-        }
-
-        
-        if let shuffleMode = payload.shuffleMode {
-            newPlaybackState.isShuffled = shuffleMode != 1
-        } else if !diff {
-            newPlaybackState.isShuffled = false
-        } else {
-            newPlaybackState.isShuffled = self.playbackState.isShuffled
-        }
-        if let repeatModeValue = payload.repeatMode {
-            newPlaybackState.repeatMode = RepeatMode(rawValue: repeatModeValue) ?? .off
-        } else if !diff {
-            newPlaybackState.repeatMode = .off
-        } else {
-            newPlaybackState.repeatMode = self.playbackState.repeatMode
-        }
-
-        if let artworkDataString = payload.artworkData {
-            newPlaybackState.artwork = Data(
-                base64Encoded: artworkDataString.trimmingCharacters(in: .whitespacesAndNewlines)
-            )
-        } else if !diff {
-            newPlaybackState.artwork = nil
-        }
-
-        if let dateString = payload.timestamp,
-           let date = ISO8601DateFormatter().date(from: dateString) {
-            newPlaybackState.lastUpdated = date
-        } else if !diff {
-            newPlaybackState.lastUpdated = Date()
-        } else {
-            newPlaybackState.lastUpdated = self.playbackState.lastUpdated
-        }
-
-        newPlaybackState.playbackRate = payload.playbackRate ?? (diff ? self.playbackState.playbackRate : 1.0)
-        newPlaybackState.isPlaying = payload.playing ?? (diff ? self.playbackState.isPlaying : false)
-        newPlaybackState.bundleIdentifier = (
-            payload.parentApplicationBundleIdentifier ??
-            payload.bundleIdentifier ??
-            (diff ? self.playbackState.bundleIdentifier : "")
-        )
-        
-        newPlaybackState.volume = payload.volume ?? (diff ? self.playbackState.volume : 0.5)
-        
-        self.playbackState = newPlaybackState
-        
-        // Fetch favorite state for supported apps asynchronously
-        // await fetchFavoriteStateIfSupported()
-    }
-    
-     private func fetchFavoriteStateIfSupported() async {
-         let bundleID = playbackState.bundleIdentifier
-        
-         if bundleID == "com.apple.Music" {
-             let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Music")
-             guard !runningApps.isEmpty else { return }
-             
-             let script = """
-             tell application "Music"
-                 try
-                     return favorited of current track
-                 on error
-                     return false
-                 end try
-             end tell
-             """
-             if let result = try? await AppleScriptHelper.execute(script) {
-                 var updated = self.playbackState
-                 updated.isFavorite = result.booleanValue
-                 self.playbackState = updated
-             }
-         }
-     }
-    
 }
 
 struct NowPlayingUpdate: Codable {
